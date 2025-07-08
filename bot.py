@@ -7,9 +7,12 @@ import aiohttp
 import hashlib
 import os
 import re
+import aiofiles
+import random
 
 TOKEN = "MTMxNTMzMTI1MDU2Mjc5NzU5OA.GTZ3Em.1BA-dbfhG7JV8SukHviKyNyrOGHYGmU9SVaaOI"
 admin_ids = [982591976392232960]
+ALLOWED_GUILD_ID = 1391735132540506113
 
 intents = nextcord.Intents.default()
 intents.message_content = True
@@ -53,6 +56,66 @@ async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
         return
     print(f"⚠️ Error: {error}")
+    
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CheckFailure):
+        await ctx.send("Bro are you trying to trick me? Common G. This bot doesn't work here.")
+        return
+    raise error
+
+@bot.check
+def global_guild_check(ctx):
+    return ctx.guild and ctx.guild.id == ALLOWED_GUILD_ID
+
+##################################
+# --- Menu ---
+##################################
+@bot.command()
+async def secmenu(ctx):
+    if ctx.author.id not in admin_ids:
+        return
+
+    embed = nextcord.Embed(
+        title="LuBot Command Panel",
+        description="> `No Refund Policy – Use responsibly.`",
+        color=nextcord.Color.purple()
+    )
+
+    embed.set_image(url="https://media.discordapp.net/attachments/1391732747365777478/1391734821449109554/standard.gif")
+
+    embed.add_field(
+        name="🆓 Free Bot Commands",
+        value=(
+            "> **Twitch Follow Bot**: `.tfollow (username)`\n"
+            "> **Kahoot Raid Bot**: `.kraid (PIN)`\n"
+        ),
+        inline=False
+    )
+
+    embed.add_field(
+        name="💎 Premium Commands",
+        value=(
+            "> **Twitch Chat Spam**: `.tspam (username) (msg)`\n"
+            "> **Twitch Live Views**: `.tlive (username)`\n"
+            "> **Twitch Token Checker**: `.checktokens` + `.txt`\n"
+            "> **Discord Token Checker**: `.checkdiscord` + `.txt`"
+        ),
+        inline=False
+    )
+
+    embed.add_field(
+        name="🦎 Booster Commands",
+        value=(
+            "> **Account Generator**: `.gen`\n"
+            "> **Roblox Follow Bot**: `.rfollow (user ID)`"
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text="Use .help for more | Developed by LuTeam")
+
+    await ctx.send(embed=embed, view=TicketButtonView())
 
 ########################
 # --- Twitch Followers ---
@@ -118,35 +181,63 @@ async def tlive(ctx, username: str):
 async def tclip(ctx, username: str):
     await ctx.send(f"Send Followers to **{username}**")
 
+########################
+# --- Gen Command ---
+########################
+class GenAccountView(View):
+    def __init__(self, ctx):
+        super().__init__(timeout=60)
+        self.ctx = ctx
 
-########################
-# --- Kick Live Views ---
-########################
+    async def send_account(self, interaction: nextcord.Interaction, service: str, icon_url: str):
+        filename = f"Assets/{service.lower()}_accounts.txt"
+        try:
+            async with aiofiles.open(filename, mode="r") as f:
+                lines = await f.readlines()
+        except FileNotFoundError:
+            await interaction.response.send_message(f"❌ `{service}_accounts.txt` not found.", ephemeral=True)
+            return
+
+        if not lines:
+            await interaction.response.send_message(f"⚠️ No {service} accounts in stock.", ephemeral=True)
+            return
+
+        account = random.choice(lines).strip()
+        embed = nextcord.Embed(
+            title=f"Your {service} Account",
+            description=f"```{account}```",
+            color=nextcord.Color.blurple()
+        )
+        embed.set_thumbnail(url=icon_url)
+
+        try:
+            dm = await interaction.user.send(embed=embed)
+            await interaction.response.send_message(f"📩 {service} account sent via DM!", ephemeral=True)
+            await asyncio.sleep(120)
+            await dm.delete()
+        except nextcord.Forbidden:
+            await interaction.response.send_message("❌ I couldn't DM you. Please enable DMs.", ephemeral=True)
+
+    @nextcord.ui.button(label="Spotify", style=nextcord.ButtonStyle.green)
+    async def spotify(self, button: Button, interaction: nextcord.Interaction):
+        await self.send_account(interaction, "Spotify", "https://cdn-icons-png.flaticon.com/512/174/174872.png")
+
+    @nextcord.ui.button(label="Netflix", style=nextcord.ButtonStyle.red)
+    async def netflix(self, button: Button, interaction: nextcord.Interaction):
+        await self.send_account(interaction, "Netflix", "https://cdn-icons-png.flaticon.com/512/732/732228.png")
+
+    @nextcord.ui.button(label="Disney+", style=nextcord.ButtonStyle.blurple)
+    async def disney(self, button: Button, interaction: nextcord.Interaction):
+        await self.send_account(interaction, "Disney", "https://cdn-icons-png.flaticon.com/512/732/732255.png")
+
 @bot.command()
-async def klive(ctx, username: str):
-    await ctx.send(f"Kick Live View Bot activated for **{username}**")
-
-
-########################
-# --- Kahood Raid Command ---
-########################
-@bot.command()
-async def kraid(ctx, pin: str, amount: int = 30):
-    if amount > 30:
-        amount = 30
-    elif amount < 1:
-        amount = 1
-
+async def gen(ctx):
     embed = nextcord.Embed(
-        description=f"Send **{amount}** bots to **{pin}**",
-        color=nextcord.Color.red()
+        title="🎁 Account Generator",
+        description="Select a service below to receive a random unchecked account.",
+        color=nextcord.Color.dark_purple()
     )
-    await ctx.send(embed=embed)
-
-    try:
-        subprocess.Popen(["node", "Assets/kahootRaid.js", pin, str(amount)])
-    except Exception as e:
-        await ctx.send(f"❌ Error starting Kahoot bots: {str(e)}")
+    await ctx.send(embed=embed, view=GenAccountView(ctx))
 
 
 ########################
@@ -173,14 +264,13 @@ async def stock(ctx):
 
     await ctx.send(embed=embed)
 
-
 ########################
 # --- Clear Command ---
 ########################
 @bot.command()
 async def clear(ctx, amount: int = 5):
     await ctx.channel.purge(limit=amount + 1)
-    msg = await ctx.send(f"🧹 Cleared `{amount}` messages.")
+    msg = await ctx.send(f"Cleared `{amount}` messages.")
     await asyncio.sleep(2)
     await msg.delete()
 
@@ -432,9 +522,6 @@ class TechnicalHelpView(View):
         ), view=None)
         await self.channel.send("@Admin A user reported the **bot is not responding**.")
 
-    ######################
-    # Technischer Support
-    ######################
     class TechnicalHelpView(View):
         def __init__(self):
             super().__init__(timeout=300)
@@ -464,40 +551,6 @@ class TechnicalHelpView(View):
                 color=nextcord.Color.blue()
             ), view=None)
             await channel.send("@Admin A user reported the **bot is not responding**.")
-
-
-##################################
-# --- Secmenu ---
-##################################
-@bot.command()
-async def secmenu(ctx):
-    if ctx.author.id not in admin_ids:
-        return
-
-    embed = nextcord.Embed(
-        title="LuBot",
-        description="> `No Refund Policy.`",
-        color=nextcord.Color.purple()
-    )
-    embed.set_image(url="https://media.discordapp.net/attachments/1391732747365777478/1391734821449109554/standard.gif")
-
-    embed.add_field(
-        name="🆓 Free Bot Commands",
-        value="> **Twitch Follow Bot**: `.tfollow (username)`\n"
-              "> **Kahoot Raid Bot**: `.kraid (PIN)`",
-        inline=False
-    )
-    embed.add_field(
-        name="💎 Premium Commands",
-        value="> **Twitch Chat Spam Bot**: `.tspam (username) (message)`\n"
-              "> **Twitch Live View Bot**: `.tlive (username)`\n"
-              "> **Twitch Clip View Bot**: `.tclip (clip ID)`\n"
-              "> **Kick Live View Bot**: `.klive (kick username)`",
-        inline=False
-    )
-
-    await ctx.send(embed=embed, view=TicketButtonView())
-
 
 ##################################
 # --- Close Command ---
@@ -630,7 +683,7 @@ async def checktokens(ctx):
         )
 
 ########################
-# --- Ban Command---
+# --- Ban Command ---
 ########################
 @bot.command()
 async def ban(ctx, user_id: int, *, reason: str = "No reason."):
@@ -639,18 +692,93 @@ async def ban(ctx, user_id: int, *, reason: str = "No reason."):
 
     try:
         user = await bot.fetch_user(user_id)
+        
+        try:
+            await user.send(f"You have been banned from **{ctx.guild.name}**.\nReason: `{reason}`")
+        except:
+            pass
+
         await ctx.guild.ban(user, reason=reason)
 
         embed = nextcord.Embed(
-            title="Ban Result:",
+            title="User Banned",
+            description=f"`{user.name}` (`{user.id}`) was banned.\n\nReason: `{reason}`",
             color=nextcord.Color.dark_gray()
         )
-        embed.add_field(name="📕 Reason:", value=reason, inline=False)
-        embed.add_field(name="🧑‍⚖️ Moderator:", value=f"{ctx.author.mention}", inline=False)
-        embed.add_field(name="Banned:", value=f"✅ `{user.name}` [ `{user.id}` ]", inline=False)
         await ctx.send(embed=embed)
 
     except Exception as e:
-        await ctx.send(f"⚠️ Failed to ban user: {e}")
+        await ctx.send(f"Failed to ban user: `{e}`")
+
+
+########################
+# --- Unban All Command ---
+########################
+@bot.command(name="unbanall")
+async def unban_all(ctx):
+    if ctx.author.id not in admin_ids:
+        return
+
+    banned_users = await ctx.guild.bans()
+    count = 0
+
+    for ban_entry in banned_users:
+        user = ban_entry.user
+        try:
+            await ctx.guild.unban(user)
+            count += 1
+        except:
+            pass
+
+    embed = nextcord.Embed(
+        title="Unban Complete",
+        description=f"Unbanned `{count}` users from the server.",
+        color=nextcord.Color.green()
+    )
+    await ctx.send(embed=embed)
+
+########################
+# --- Blacklist Command ---
+########################
+blacklisted_users = []
+
+@bot.command()
+async def blacklist(ctx, user_id: int):
+    if ctx.author.id not in admin_ids:
+        return
+
+    if user_id in blacklisted_users:
+        await ctx.send(f"`{user_id}` is already blacklisted.")
+        return
+
+    blacklisted_users.append(user_id)
+    await ctx.send(f"`{user_id}` has been blacklisted.")
+
+@bot.check
+async def block_blacklisted_users(ctx):
+    if ctx.author.id in blacklisted_users:
+        raise commands.CheckFailure("You are blacklisted.")
+    return True
+
+########################
+# --- Role Command ---
+########################
+@bot.command()
+async def role(ctx, *, role_name):
+    if ctx.channel.id != bots_channel:
+        await ctx.send("Wrong channel.")
+        return
+
+    role = discord.utils.get(ctx.guild.roles, name=role_name)
+    if not role:
+        await ctx.send("Role not found.")
+        return
+
+    if role in ctx.author.roles:
+        await ctx.author.remove_roles(role)
+        await ctx.send(f"Removed role `{role.name}`.")
+    else:
+        await ctx.author.add_roles(role)
+        await ctx.send(f"Added role `{role.name}`.")
 
 bot.run(TOKEN)
