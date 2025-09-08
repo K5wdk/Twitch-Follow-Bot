@@ -10,9 +10,9 @@ import re
 import aiofiles
 import random
 
-TOKEN = "MTMxNTMzMTI1MDU2Mjc5NzU5OA.GTZ3Em.1BA-dbfhG7JV8SukHviKyNyrOGHYGmU9SVaaOI"
-admin_ids = [982591976392232960]
-ALLOWED_GUILD_ID = 1391735132540506113
+TOKEN = "YOUR DISCORD BOT TOKEN HERE" # Paste in your Token here
+admin_ids = 123456789 # Replace in the AdminIDs here
+ALLOWED_GUILD_ID = 123456789 # Replace in the ServerID here
 
 intents = nextcord.Intents.default()
 intents.message_content = True
@@ -29,7 +29,7 @@ LAST_HASHES = {
 
 async def check_and_announce_updates(bot):
     await bot.wait_until_ready()
-    channel = bot.get_channel(1391732747365777478)
+    channel = bot.get_channel(YOURID) # Your channelid hereeeeeee
 
     while not bot.is_closed():
         for file_path in LAST_HASHES.keys():
@@ -782,3 +782,4 @@ async def role(ctx, *, role_name):
         await ctx.send(f"Added role `{role.name}`.")
 
 bot.run(TOKEN)
+
