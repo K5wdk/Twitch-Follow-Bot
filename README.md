@@ -1,4 +1,4 @@
-https://i.postimg.cc/g0tJy1W2/sddefault.jpg
+<a href='https://postimages.org/' target='_blank'><img src='https://i.postimg.cc/g0tJy1W2/sddefault.jpg' border='0' alt='sddefault'/></a>
 
 # LuBot - TFB / KHTRB
 
