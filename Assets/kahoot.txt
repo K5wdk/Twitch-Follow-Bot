@@ -1,3 +1,8 @@
+#################################
+#-  Paste in your Workers here -#
+# ----    MADE BY KWDK     ---- #
+#################################
+
 Worker1
 Worker2
 Worker3
